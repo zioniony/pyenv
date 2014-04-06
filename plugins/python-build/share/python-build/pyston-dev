@@ -1,0 +1,104 @@
+DEPS_DIR="${HOME}/pyston_deps"
+mkdir -p "${DEPS_DIR}"
+
+[ -d "${DEPS_DIR}/gcc-4.8.2" ] || {
+  pushd "${DEPS_DIR}"
+  fetch_tarball "gcc-4.8.2" "http://www.netgull.com/gcc/releases/gcc-4.8.2/gcc-4.8.2.tar.bz2#a3d7d63b9cb6b6ea049469a0c4a43c9d"
+  popd
+} >&4 2>&1
+if [ -d "${DEPS_DIR}/gcc-4.8.2-install" ]; then
+  GCC_DIR="${DEPS_DIR}/gcc-4.8.2-install"
+  GCC="${GCC_DIR}/bin/gcc"
+  GPP="${GCC_DIR}/bin/g++"
+else
+  if [[ "$("${GCC}" --version || gcc --version || true)" == *"4.8.2"* ]]; then
+    GCC="$(command -v "${GCC}" || command -v gcc || true)"
+    GPP="$(command -v "${GPP}" || command -v g++ || true)"
+    GCC_DIR="${GCC%/bin/gcc}"
+  else
+    GCC_DIR="${DEPS_DIR}/gcc-4.8.2-install"
+    GCC="${GCC_DIR}/bin/gcc"
+    GPP="${GCC_DIR}/bin/g++"
+    ( export PREFIX_PATH="${GCC_DIR}"
+      install_package "gcc-4.8.2" "http://www.netgull.com/gcc/releases/gcc-4.8.2/gcc-4.8.2.tar.bz2#a3d7d63b9cb6b6ea049469a0c4a43c9d"
+    ) >&4 2>&1
+  fi
+fi
+
+[ -d "${DEPS_DIR}/valgrind-3.9.0" ] || {
+  pushd "${DEPS_DIR}"
+  fetch_tarball "valgrind-3.9.0" "http://valgrind.org/downloads/valgrind-3.9.0.tar.bz2#0947de8112f946b9ce64764af7be6df2"
+  popd
+} >&4 2>&1
+if [ -d "${DEPS_DIR}/valgrind-3.9.0-install" ]; then
+  VALGRIND_DIR="${DEPS_DIR}/valgrind-3.9.0-install"
+  VALGRIND="VALGRIND_LIB=${VALGRIND_DIR}/lib/valgrind ${VALGRIND_DIR}/bin/valgrind"
+else
+  if [[ "$("${VALGRIND}" --version || valgrind --version || true)" == *"3.9.0"* ]]; then
+    VALGRIND="$(command -v "${VALGRIND}" || command -v valgrind || true)"
+    VALGRIND_DIR="${VALGRIND%/bin/valgrind}"
+  else
+    VALGRIND_DIR="${DEPS_DIR}/valgrind-3.9.0-install"
+    VALGRIND="VALGRIND_LIB=${VALGRIND_DIR}/lib/valgrind ${VALGRIND_DIR}/bin/valgrind"
+    ( export PREFIX_PATH="${VALGRIND_DIR}"
+      install_package "valgrind-3.9.0" "http://valgrind.org/downloads/valgrind-3.9.0.tar.bz2#0947de8112f946b9ce64764af7be6df2"
+    ) >&4 2>&1
+  fi
+fi
+
+LLVM_TRUNK_SRC="${DEPS_DIR}/llvm-trunk"
+LLVM_TRUNK_BUILD="${DEPS_DIR}/llvm-trunk-build"
+{ pushd "$(dirname "${LLVM_TRUNK_SRC}")"
+  fetch_git "$(basename "${LLVM_TRUNK_SRC}")" "https://github.com/llvm-mirror/llvm.git" "master"
+  { pushd "${LLVM_TRUNK_SRC}/tools"
+    fetch_git "clang" "https://github.com/llvm-mirror/clang.git" "master"
+    popd
+  }
+  popd
+} >&4 2>&1
+
+{ pushd "${BUILD_PATH}"
+  fetch_git "pyston" "https://github.com/dropbox/pyston.git" "master"
+  popd
+} >&4 2>&1
+
+MAKEFILE_LOCAL="${BUILD_PATH}/pyston/src/Makefile.local"
+rm -f "${MAKEFILE_LOCAL}"
+cat <<EOS > "${MAKEFILE_LOCAL}"
+VERBOSE := 1
+DEPS_DIR := ${DEPS_DIR}
+GCC_DIR := ${GCC_DIR}
+VALGRIND_DIR := ${VALGRIND_DIR}
+EOS
+
+{ pushd "${BUILD_PATH}/pyston/src"
+  make llvm_up
+  make llvm_configure
+  make llvm -j$(num_cpu_cores)
+# make pyston_all
+  make pyston
+  popd
+} >&4 2>&1
+
+## install
+{ pushd "${BUILD_PATH}"
+  mkdir "bin" || true
+  for pyston in "${BUILD_PATH}/pyston/src"/pyston*; do
+    if [ -x "${pyston}" ]; then
+      rm -f "bin/$(basename "${pyston}")"
+      cat <<EOS > "bin/$(basename "${pyston}")"
+#!/usr/bin/env bash
+set -e
+# FIXME: pyston requires CPython installation to run
+export PYENV_VERSION="system"
+cd "\$(dirname "\${BASH_SOURCE[0]}")/../pyston/src"
+./$(basename "${pyston}") "\$@"
+EOS
+    fi
+    chmod +x "bin/$(basename "${pyston}")"
+  done
+  build_package_copy
+  popd
+} >&4 2>&1
+
+# vim:set ft=sh :
