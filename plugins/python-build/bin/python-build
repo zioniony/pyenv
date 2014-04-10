@@ -354,9 +354,9 @@ fetch_git() {
       pushd "$PYTHON_BUILD_CACHE_PATH" >&4
       local clone_name="$(sanitize "$git_url")"
       if [ -e "${clone_name}" ]; then
-        { cd "${clone_name}"
+        ( cd "${clone_name}"
           git fetch --force "$git_url" "+${git_ref}:${git_ref}"
-        } >&4 2>&1
+        ) >&4 2>&1
       else
         git clone --bare --branch "$git_ref" "$git_url" "${clone_name}" >&4 2>&1
       fi
@@ -364,7 +364,13 @@ fetch_git() {
       popd >&4
     fi
 
-    git clone --depth 1 --branch "$git_ref" "$git_url" "${package_name}" >&4 2>&1
+    if [ -e "${package_name}" ]; then
+      ( cd "${package_name}"
+        git fetch --force --update-head-ok "$git_url" "+${git_ref}:${git_ref}"
+      ) >&4 2>&1
+    else
+      git clone --depth 1 --branch "$git_ref" "$git_url" "${package_name}" >&4 2>&1
+    fi
   else
     echo "error: please install \`git\` and try again" >&2
     exit 1
@@ -383,20 +389,26 @@ fetch_hg() {
       pushd "$PYTHON_BUILD_CACHE_PATH" >&4
       local clone_name="$(sanitize "$hg_url")"
       if [ -e "${clone_name}" ]; then
-        { cd "${clone_name}"
+        ( cd "${clone_name}"
           hg pull --force "$hg_url"
-        } >&4 2>&1
+        ) >&4 2>&1
       else
-        { hg clone --branch "$hg_ref" "$hg_url" "${clone_name}"
+        ( hg clone --branch "$hg_ref" "$hg_url" "${clone_name}"
           cd "${clone_name}"
           hg update null
-        } >&4 2>&1
+        ) >&4 2>&1
       fi
       hg_url="$PYTHON_BUILD_CACHE_PATH/${clone_name}"
       popd >&4
     fi
 
-    hg clone --branch "$hg_ref" "$hg_url" "${package_name}" >&4 2>&1
+    if [ -e "${package_name}" ]; then
+      ( cd "${package_name}"
+        hg pull --branch "$hg_ref" --force "$hg_url"
+      ) >&4 2>&1
+    else
+      hg clone --branch "$hg_ref" "$hg_url" "${package_name}" >&4 2>&1
+    fi
   else
     echo "error: please install \`hg\` and try again" >&2
     exit 1
