@@ -11,7 +11,7 @@ if [ -d "${DEPS_DIR}/gcc-4.8.2-install" ]; then
   GCC="${GCC_DIR}/bin/gcc"
   GPP="${GCC_DIR}/bin/g++"
 else
-  if [[ "$("${GCC}" --version || gcc --version || true)" == *"4.8.2"* ]]; then
+  if [[ "$("${GCC}" --version 2>/dev/null || gcc --version 2>/dev/null || true)" == *"4.8.2"* ]]; then
     GCC="$(command -v "${GCC}" || command -v gcc || true)"
     GPP="$(command -v "${GPP}" || command -v g++ || true)"
     GCC_DIR="${GCC%/$(basename "${GCC}")}"
@@ -36,7 +36,7 @@ if [ -d "${DEPS_DIR}/valgrind-3.9.0-install" ]; then
   VALGRIND_DIR="${DEPS_DIR}/valgrind-3.9.0-install"
   VALGRIND="VALGRIND_LIB=${VALGRIND_DIR}/lib/valgrind ${VALGRIND_DIR}/bin/valgrind"
 else
-  if [[ "$("${VALGRIND}" --version || valgrind --version || true)" == *"3.9.0"* ]]; then
+  if [[ "$("${VALGRIND}" --version 2>/dev/null || valgrind --version 2>/dev/null || true)" == *"3.9.0"* ]]; then
     VALGRIND="$(command -v "${VALGRIND}" || command -v valgrind || true)"
     VALGRIND_DIR="${VALGRIND%/$(basename "${VALGRIND}")}"
     VALGRIND_DIR="${VALGRIND_DIR%/bin}"
