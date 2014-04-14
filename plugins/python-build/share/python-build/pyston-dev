@@ -14,12 +14,14 @@ else
   if [[ "$("${GCC}" --version || gcc --version || true)" == *"4.8.2"* ]]; then
     GCC="$(command -v "${GCC}" || command -v gcc || true)"
     GPP="$(command -v "${GPP}" || command -v g++ || true)"
-    GCC_DIR="${GCC%/bin/gcc}"
+    GCC_DIR="${GCC%/$(basename "${GCC}")}"
+    GCC_DIR="${GCC_DIR%/bin}"
   else
     GCC_DIR="${DEPS_DIR}/gcc-4.8.2-install"
     GCC="${GCC_DIR}/bin/gcc"
     GPP="${GCC_DIR}/bin/g++"
     ( export PREFIX_PATH="${GCC_DIR}"
+      export GCC_CONFIGURE_OPTS="$GCC_CONFIGURE_OPTS --enable-languages=c,c++"
       install_package "gcc-4.8.2" "http://www.netgull.com/gcc/releases/gcc-4.8.2/gcc-4.8.2.tar.bz2#a3d7d63b9cb6b6ea049469a0c4a43c9d"
     ) >&4 2>&1
   fi
@@ -36,11 +38,13 @@ if [ -d "${DEPS_DIR}/valgrind-3.9.0-install" ]; then
 else
   if [[ "$("${VALGRIND}" --version || valgrind --version || true)" == *"3.9.0"* ]]; then
     VALGRIND="$(command -v "${VALGRIND}" || command -v valgrind || true)"
-    VALGRIND_DIR="${VALGRIND%/bin/valgrind}"
+    VALGRIND_DIR="${VALGRIND%/$(basename "${VALGRIND}")}"
+    VALGRIND_DIR="${VALGRIND_DIR%/bin}"
   else
     VALGRIND_DIR="${DEPS_DIR}/valgrind-3.9.0-install"
     VALGRIND="VALGRIND_LIB=${VALGRIND_DIR}/lib/valgrind ${VALGRIND_DIR}/bin/valgrind"
     ( export PREFIX_PATH="${VALGRIND_DIR}"
+      export VALGRIND_CONFIGURE_OPTS="$VALGRIND_CONFIGURE_OPTS"
       install_package "valgrind-3.9.0" "http://valgrind.org/downloads/valgrind-3.9.0.tar.bz2#0947de8112f946b9ce64764af7be6df2"
     ) >&4 2>&1
   fi
