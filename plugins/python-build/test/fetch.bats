@@ -29,7 +29,9 @@ OUT
 }
 
 @test "updating existing git repository" {
-  stub git "fetch --force --update-head-ok http://example.com/packages/package.git +master:master : true"
+  stub git "reset --hard master : true"
+  stub git "checkout master : true"
+  stub git "pull --force http://example.com/packages/package.git +master:master : true"
 
   run_inline_definition <<DEF
 mkdir "\${BUILD_PATH}/package-dev"
