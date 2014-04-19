@@ -1,0 +1,3 @@
+version=3
+opts=filenamemangle=s/.+\/v?(\d\S*)\.tar\.gz/pyenv-$1.tar.gz/ \
+  https://github.com/yyuu/pyenv/releases .*/v?(\d\S*)\.tar\.gz
